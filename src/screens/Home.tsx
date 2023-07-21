@@ -4,7 +4,8 @@ import React from "react";
 import { useAuthContext } from "../context/Auth";
 import { protectedInstance } from "../api";
 
-const HomeScreen = () => {
+// @ts-ignore
+const HomeScreen = ({ navigation }) => {
   const { removeTokens } = useAuthContext();
 
   const getSubjects = async () => {
@@ -22,6 +23,7 @@ const HomeScreen = () => {
     <View style={styles.container}>
       <Text>HomeScreen Ok</Text>
       <Button title="Remove Token" onPress={removeTokens} />
+      <Button title="Change Password" onPress={() => navigation.navigate("ChangePassword")} />
     </View>
   );
 };
@@ -33,5 +35,6 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
+    gap: 10,
   },
 });
