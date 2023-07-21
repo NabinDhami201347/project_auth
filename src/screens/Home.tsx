@@ -5,7 +5,7 @@ import { useAuthContext } from "../context/Auth";
 import { protectedInstance } from "../api";
 
 const HomeScreen = () => {
-  const { removeToken } = useAuthContext();
+  const { removeTokens } = useAuthContext();
 
   const getSubjects = async () => {
     try {
@@ -20,8 +20,8 @@ const HomeScreen = () => {
 
   return (
     <View style={styles.container}>
-      <Text>HomeScreen</Text>
-      <Button title="Remove Token" onPress={removeToken} />
+      <Text>HomeScreen Ok</Text>
+      <Button title="Remove Token" onPress={removeTokens} />
     </View>
   );
 };

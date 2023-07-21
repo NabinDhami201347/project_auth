@@ -1,3 +1,7 @@
+
+
+
+```ts
 import axios, { AxiosInstance, AxiosResponse, AxiosError } from "axios";
 import * as SecureStore from "expo-secure-store";
 
@@ -92,3 +96,28 @@ protectedInstance.interceptors.response.use(
 );
 
 export { publicInstance, protectedInstance };
+```
+
+In this code snippet, the goal is to create two Axios instances: `publicInstance` and `protectedInstance`. The `publicInstance` is intended for making requests to public routes, while the `protectedInstance` is for accessing protected routes that require authentication.
+
+Summary of the code:
+
+1. Import libraries: The code imports the necessary modules, including `axios` for making HTTP requests and `SecureStore` from "expo-secure-store" to securely store user access tokens.
+
+2. Set Axios defaults: The `axiosDefaults` object contains the common configuration options for both instances, including the base URL, timeout, and headers.
+
+3. Create Axios instances: Two Axios instances are created using `axios.create()` with the `axiosDefaults`. These instances will be used to make API calls to different endpoints.
+
+4. Implement functions for working with user access tokens: The code defines functions `getUserAccessToken()` and `setUserAccessToken()` for retrieving and storing the user's access token securely in the device.
+
+5. Refresh access token: The `refreshAccessToken()` function is used to refresh the user access token by making a POST request to the `/auth/refresh` endpoint. If the refresh is successful, the new access token is stored securely using `setUserAccessToken()`.
+
+6. Interceptors for protectedInstance: Two interceptors are set for the `protectedInstance`. The first one is a request interceptor that automatically attaches the user's access token to the request's headers if available.
+
+7. Interceptor for token expiration and refresh: The second interceptor is a response interceptor. If the `protectedInstance` receives a 401 (Unauthorized) response, it means the token has expired. The interceptor then tries to refresh the access token using the `refreshAccessToken()` function.
+
+8. Retry original request with the new token: After successfully refreshing the access token, the interceptor updates the `Authorization` header with the new token and retries the original request using the `axios()` function.
+
+9. Error handling: If the token refresh fails or the user is not authenticated, appropriate error messages are thrown. Other errors are also handled and rejected accordingly.
+
+In summary, this code sets up two Axios instances, handles authentication using interceptors, and provides a mechanism to refresh access tokens when they expire, ensuring secure and seamless communication with a backend API for both public and protected routes.

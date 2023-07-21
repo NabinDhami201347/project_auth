@@ -5,17 +5,18 @@ import { NavigationContainer } from "@react-navigation/native";
 
 import { useAuthContext } from "../context/Auth";
 import HomeScreen from "../screens/Home";
+import SignInScreen from "../screens/SignIn";
 
 const Stack = createNativeStackNavigator();
 
 export default function Routes() {
-  const { token } = useAuthContext();
+  const { access_token } = useAuthContext();
 
   return (
     <NavigationContainer>
       <Stack.Navigator>
         <>
-          {token ? (
+          {access_token ? (
             <>
               <Stack.Screen name="Home" component={HomeScreen} />
               <Stack.Screen name="Profile" component={ProfileScreen} />
@@ -32,29 +33,8 @@ export default function Routes() {
   );
 }
 
-//
-
 function ProfileScreen() {
   return <View />;
-}
-
-function HelpScreen() {
-  return <View />;
-}
-
-function SignInScreen() {
-  const [username, setUsername] = React.useState("");
-  const [password, setPassword] = React.useState("");
-
-  const { setToken } = useAuthContext();
-
-  return (
-    <View>
-      <TextInput placeholder="Username" value={username} onChangeText={setUsername} />
-      <TextInput placeholder="Password" value={password} onChangeText={setPassword} secureTextEntry />
-      <Button title="Sign in" onPress={() => setToken(username)} />
-    </View>
-  );
 }
 
 function SignUpScreen() {

@@ -3,34 +3,19 @@ import * as SecureStore from "expo-secure-store";
 import LoadingScreen from "../screens/Loading";
 
 type AuthContextValue = {
-  token: string | null;
+  access_token: string | null;
+  refresh_token: string | null;
   isLoading: boolean;
-  setToken: (token: string) => Promise<void>;
-  removeToken: () => Promise<void>;
+  setTokens: (access_token: string, refresh_token: string) => Promise<void>;
+  removeTokens: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [token, setToken] = useState<string | null>(null);
+  const [access_token, setAccessToken] = useState<string | null>(null);
+  const [refresh_token, setRefreshToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-
-  //   useEffect(() => {
-  //     const bootstrapAsync = async () => {
-  //       try {
-  //         const userToken = await SecureStore.getItemAsync("userToken");
-  //         if (userToken) {
-  //           setToken(userToken);
-  //         }
-  //       } catch (error) {
-  //         console.error("Error retrieving token:", error);
-  //       } finally {
-  //         setIsLoading(false);
-  //       }
-  //     };
-
-  //     bootstrapAsync();
-  //   }, []);
 
   useEffect(() => {
     const bootstrapAsync = async () => {
@@ -38,12 +23,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // Simulate a 4-second delay for token retrieval
         await new Promise((resolve) => setTimeout(resolve, 4000));
 
-        const userToken = await SecureStore.getItemAsync("userToken");
-        if (userToken) {
-          setToken(userToken);
+        const userAccessToken = await SecureStore.getItemAsync("userAccessToken");
+        const userRefreshToken = await SecureStore.getItemAsync("userRefreshToken");
+
+        if (userAccessToken && userRefreshToken) {
+          setAccessToken(userAccessToken);
+          setRefreshToken(userRefreshToken);
         }
       } catch (error) {
-        console.error("Error retrieving token:", error);
+        console.error("Error retrieving tokens:", error);
       } finally {
         setIsLoading(false);
       }
@@ -52,38 +40,34 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     bootstrapAsync();
   }, []);
 
-  const setStoredToken = async (newToken: string) => {
+  const setStoredTokens = async (newAccessToken: string, newRefreshToken: string) => {
     try {
-      await SecureStore.setItemAsync("userToken", newToken);
-      setToken(newToken);
-      scheduleTokenExpiration(); // Schedule token expiration after 1 hour
+      await SecureStore.setItemAsync("userAccessToken", newAccessToken);
+      await SecureStore.setItemAsync("userRefreshToken", newRefreshToken);
+      setAccessToken(newAccessToken);
+      setRefreshToken(newRefreshToken);
     } catch (error) {
-      console.error("Error setting token:", error);
+      console.error("Error setting tokens:", error);
     }
   };
 
-  const removeToken = async () => {
+  const removeTokens = async () => {
     try {
-      await SecureStore.deleteItemAsync("userToken");
-      setToken(null);
+      await SecureStore.deleteItemAsync("userAccessToken");
+      await SecureStore.deleteItemAsync("userRefreshToken");
+      setAccessToken(null);
+      setRefreshToken(null);
     } catch (error) {
-      console.error("Error removing token:", error);
+      console.error("Error removing tokens:", error);
     }
-  };
-
-  const scheduleTokenExpiration = () => {
-    // Set the token expiration timer for 1 hour (3600 seconds)
-    setTimeout(() => {
-      console.log("Time is up");
-      removeToken(); // Remove the token after 1 hour
-    }, 3600000); // 1 hour = 3600 seconds * 1000 milliseconds
   };
 
   const authContext: AuthContextValue = {
-    token,
+    access_token,
+    refresh_token,
     isLoading,
-    setToken: setStoredToken,
-    removeToken,
+    setTokens: setStoredTokens,
+    removeTokens,
   };
 
   return (
