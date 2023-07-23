@@ -2,22 +2,23 @@ import { Button, StyleSheet, Text, View } from "react-native";
 import React from "react";
 
 import { useAuthContext } from "../context/Auth";
-import { protectedInstance } from "../api";
+import { protectedInstance, fileuri } from "../api";
 
 // @ts-ignore
 const HomeScreen = ({ navigation }) => {
   const { removeTokens } = useAuthContext();
+  console.log(`${fileuri}file-1688647182290-710961280.pdf`);
 
-  const getSubjects = async () => {
-    try {
-      const { data } = await protectedInstance.get("/subjects/1");
-      console.log(data);
-      return data;
-    } catch (error: any) {
-      console.error(error.response.data);
-    }
-  };
-  getSubjects();
+  // const getSubjects = async () => {
+  //   try {
+  //     const { data } = await protectedInstance.get("/subjects/1");
+  //     console.log(data);
+  //     return data;
+  //   } catch (error: any) {
+  //     console.error(error.response.data);
+  //   }
+  // };
+  // getSubjects();
 
   return (
     <View style={styles.container}>

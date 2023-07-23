@@ -30,7 +30,7 @@ const SignUpScreen = ({ navigation }) => {
         onChangeText={setPasswordConfirmation}
         secureTextEntry
       />
-      <Button title="Sign in" onPress={handlePress} />
+      <Button title="Sign up" onPress={handlePress} />
       <Button title="Already have an account" onPress={() => navigation.navigate("SignIn")} />
     </View>
   );

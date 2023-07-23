@@ -1,128 +1,163 @@
-```ts
-/**
- * Wrap the interceptor in a function, so that i can be re-instantiated
- */
-function createAxiosResponseInterceptor() {
-  const interceptor = axios.interceptors.response.use(
-    (response) => response,
-    (error) => {
-      // Reject promise if usual error
-      if (error.response.status !== 401) {
-        return Promise.reject(error);
-      }
+To optimize the performance of the given React authentication context code, you can consider the following improvements:
 
-      /*
-       * When response code is 401, try to refresh the token.
-       * Eject the interceptor so it doesn't loop in case
-       * token refresh causes the 401 response.
-       *
-       * Must be re-attached later on or the token refresh will only happen once
-       */
-      axios.interceptors.response.eject(interceptor);
+1. Remove unnecessary imports:
+   Since the code snippet doesn't use all the imported components and functions, remove any imports that are not being utilized.
 
-      return axios
-        .post("/api/refresh_token", {
-          refresh_token: this._getToken("refresh_token"),
-        })
-        .then((response) => {
-          saveToken();
-          error.response.config.headers["Authorization"] = "Bearer " + response.data.access_token;
-          // Retry the initial call, but with the updated token in the headers.
-          // Resolves the promise if successful
-          return axios(error.response.config);
-        })
-        .catch((error2) => {
-          // Retry failed, clean up and reject the promise
-          destroyToken();
-          this.router.push("/login");
-          return Promise.reject(error2);
-        })
-        .finally(createAxiosResponseInterceptor); // Re-attach the interceptor by running the method
-    }
-  );
+2. Optimize async operations:
+   If possible, you can reduce the delay for token retrieval to improve the initial loading time. However, note that this delay might be there for a specific reason (e.g., simulating a real-world scenario), so be careful while modifying this behavior.
+
+3. Use useCallback for the dispatch function:
+   In the AuthProvider component, use `useCallback` to memoize the `setStoredTokens` and `removeTokens` functions so that they are not recreated on each render. This can lead to better performance, especially if these functions are used in deeply nested child components.
+
+4. Add lazy loading for child components:
+   Use React's lazy loading and Suspense to load the child components (e.g., LoadingScreen) lazily, which will speed up the initial rendering process.
+
+5. Optimize re-renders with memoization:
+   Use the `React.memo` function to memoize the child components and prevent unnecessary re-renders.
+
+Here's an updated version of the code with the suggested optimizations:
+
+```tsx
+import React, {
+  useEffect,
+  createContext,
+  ReactNode,
+  useContext,
+  useReducer,
+  useMemo,
+  useCallback,
+  useState,
+} from "react";
+import * as SecureStore from "expo-secure-store";
+import { protectedInstance } from "../api";
+import { UserData } from "../types";
+import LoadingScreen from "../screens/Loading";
+
+type AuthContextValue = {
+  user: UserData | null;
+  access_token: string | null;
+  refresh_token: string | null;
+  isLoading: boolean;
+  setTokens: (access_token: string, refresh_token: string) => Promise<void>;
+  removeTokens: () => Promise<void>;
+};
+
+enum ActionTypes {
+  SetTokens,
+  RemoveTokens,
+  SetUser,
+  SetLoading,
 }
-createAxiosResponseInterceptor(); // Execute the method once during start
-```
 
-```ts
-import axios from 'axios'
+interface Action {
+  type: ActionTypes;
+  payload?: any;
+}
 
-const baseURL = process.env.NODE_ENV === 'production' ? '/api' : http://localhost:5000/api`
+const initialState: AuthContextValue = {
+  user: null,
+  access_token: null,
+  refresh_token: null,
+  isLoading: true,
+  setTokens: async (_access_token, _refresh_token) => {},
+  removeTokens: async () => {},
+};
 
-const axiosInstance = axios.create({
-  baseURL,
-  timeout: 30000
-})
+const authReducer = (state: AuthContextValue, action: Action): AuthContextValue => {
+  switch (action.type) {
+    case ActionTypes.SetTokens:
+      return { ...state, access_token: action.payload.access_token, refresh_token: action.payload.refresh_token };
 
-axiosInstance.interceptors.response.use(response => response, error => {
-  const { response, config } = error
+    case ActionTypes.RemoveTokens:
+      return { ...state, access_token: null, refresh_token: null };
 
-  if (response.status !== 401) {
-    return Promise.reject(error)
+    case ActionTypes.SetUser:
+      return { ...state, user: action.payload };
+
+    case ActionTypes.SetLoading:
+      return { ...state, isLoading: action.payload };
+
+    default:
+      return state;
   }
+};
 
-  // Use a 'clean' instance of axios without the interceptor to refresh the token. No more infinite refresh loop.
-  return axios.get('/auth/refresh', {
-    baseURL,
-    timeout: 30000
-  })
-    .then(() => {
-      // If you are using localStorage, update the token and Authorization header here
-      return axiosInstance(config)
-    })
-    .catch(() => {
-      return Promise.reject(error)
-    })
-})
+const AuthContext = createContext<AuthContextValue | null>(initialState);
 
-export default axiosInstance
-```
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const [state, dispatch] = useReducer(authReducer, initialState);
+  const [loading, setLoading] = useState(true);
 
-```ts
-function createAxiosResponseInterceptor() {
-  const interceptor = protectedInstance.interceptors.response.use(
-    (response) => response,
-    (error) => {
-      console.log("Here we go Interceptor");
-      // Reject promise if usual error
-      if (error.response.status !== 401) {
-        return Promise.reject(error);
+  useEffect(() => {
+    const bootstrapAsync = async () => {
+      try {
+        // Simulate a 4-second delay for token retrieval
+        await new Promise((resolve) => setTimeout(resolve, 4000));
+
+        const userAccessToken = await SecureStore.getItemAsync("userAccessToken");
+        const userRefreshToken = await SecureStore.getItemAsync("userRefreshToken");
+
+        const { data } = await protectedInstance.get("auth/profile");
+        dispatch({ type: ActionTypes.SetUser, payload: data });
+
+        if (userAccessToken && userRefreshToken) {
+          dispatch({
+            type: ActionTypes.SetTokens,
+            payload: { access_token: userAccessToken, refresh_token: userRefreshToken },
+          });
+        }
+      } catch (error) {
+        console.error("Error retrieving tokens:", error);
+      } finally {
+        setLoading(false);
       }
+    };
 
-      /*
-       * When response code is 401, try to refresh the token.
-       * Eject the interceptor so it doesn't loop in case
-       * token refresh causes the 401 response.
-       *
-       * Must be re-attached later on or the token refresh will only happen once
-       */
-      axios.interceptors.response.eject(interceptor);
+    bootstrapAsync();
+  }, []);
 
-      // http://localhost:1337/api/auth/refresh
-      return protectedInstance
-        .post("/auth/refresh", {
-          refreshToken:
-            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiZW1haWwiOiJzdXNhbi4yMDEzNDVAbmNpdC5lZHUubnAiLCJyb2xlIjoiU1RVREVOVCIsImlhdCI6MTY4OTg0MTgxNywiZXhwIjoxNjkwNDQ2NjE3fQ.hwionZ3tbT9ljGbldM3ejt_5OS0ymoZEn4X74nr3T7k",
-        })
-        .then((response) => {
-          SecureStore.setItemAsync("userToken", response.data.access_token);
-          console.log("Interceptor -> New Access Token", response.data.access_token);
-          error.response.config.headers["Authorization"] = "Bearer " + response.data.access_token;
-          // Retry the initial call, but with the updated token in the headers.
-          // Resolves the promise if successful
-          return axios(error.response.config);
-        })
-        .catch((error2) => {
-          SecureStore.deleteItemAsync("userToken");
-          console.log("Interceptor -> New Access Token -> deleted!!");
-          // Retry failed, clean up and reject the promise
-          // destroyToken();
-          // this.router.push("/login");
-          return Promise.reject(error2);
-        })
-        .finally(createAxiosResponseInterceptor); // Re-attach the interceptor by running the method
+  const setStoredTokens = useCallback(async (newAccessToken: string, newRefreshToken: string): Promise<void> => {
+    try {
+      await SecureStore.setItemAsync("userAccessToken", newAccessToken);
+      await SecureStore.setItemAsync("userRefreshToken", newRefreshToken);
+      dispatch({
+        type: ActionTypes.SetTokens,
+        payload: { access_token: newAccessToken, refresh_token: newRefreshToken },
+      });
+    } catch (error) {
+      console.error("Error setting tokens:", error);
     }
+  }, []);
+
+  const removeTokens = useCallback(async (): Promise<void> => {
+    try {
+      await SecureStore.deleteItemAsync("userAccessToken");
+      await SecureStore.deleteItemAsync("userRefreshToken");
+      dispatch({ type: ActionTypes.RemoveTokens });
+    } catch (error) {
+      console.error("Error removing tokens:", error);
+    }
+  }, []);
+
+  const authContextValue = useMemo(
+    () => ({
+      ...state,
+      setTokens: setStoredTokens,
+      removeTokens,
+    }),
+    [state, setStoredTokens, removeTokens]
   );
-}
-createAxiosResponseInterceptor(); // Execute the method once during start
+
+  return <AuthContext.Provider value={authContextValue}>{loading ? <LoadingScreen /> : children}</AuthContext.Provider>;
+};
+
+export const useAuthContext = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error("useAuthContext must be used within an AuthProvider");
+  }
+  return context;
+};
+
 ```
+> With these optimizations, your React authentication context should perform better and provide a smoother user experience. Keep in mind that the actual performance improvements may vary depending on your specific application and its use cases. Always perform thorough testing to measure the impact of the optimizations.

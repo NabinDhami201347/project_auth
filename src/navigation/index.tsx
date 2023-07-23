@@ -11,12 +11,17 @@ import {
   SignInScreen,
   SignUpScreen,
 } from "../screens";
+import ProfileIcon from "../components/ProfileIcon";
 
 const Stack = createNativeStackNavigator();
 
 const PrivateStack = () => {
   return (
-    <Stack.Navigator>
+    <Stack.Navigator
+      screenOptions={{
+        headerRight: () => <ProfileIcon />,
+      }}
+    >
       <Stack.Screen name="Home" component={HomeScreen} />
       <Stack.Screen name="Profile" component={ProfileScreen} />
       <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />

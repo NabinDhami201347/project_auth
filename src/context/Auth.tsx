@@ -1,8 +1,20 @@
-import React, { useEffect, createContext, ReactNode, useContext, useState } from "react";
+import React, {
+  useEffect,
+  createContext,
+  ReactNode,
+  useContext,
+  useReducer,
+  useMemo,
+  useCallback,
+  useState,
+} from "react";
 import * as SecureStore from "expo-secure-store";
+import { protectedInstance } from "../api";
+import { UserData } from "../types";
 import LoadingScreen from "../screens/Loading";
 
 type AuthContextValue = {
+  user: UserData | null;
   access_token: string | null;
   refresh_token: string | null;
   isLoading: boolean;
@@ -10,12 +22,51 @@ type AuthContextValue = {
   removeTokens: () => Promise<void>;
 };
 
-const AuthContext = createContext<AuthContextValue | null>(null);
+enum ActionTypes {
+  SetTokens,
+  RemoveTokens,
+  SetUser,
+  SetLoading,
+}
+
+interface Action {
+  type: ActionTypes;
+  payload?: any;
+}
+
+const initialState: AuthContextValue = {
+  user: null,
+  access_token: null,
+  refresh_token: null,
+  isLoading: true,
+  setTokens: async (_access_token, _refresh_token) => {},
+  removeTokens: async () => {},
+};
+
+const authReducer = (state: AuthContextValue, action: Action): AuthContextValue => {
+  switch (action.type) {
+    case ActionTypes.SetTokens:
+      return { ...state, access_token: action.payload.access_token, refresh_token: action.payload.refresh_token };
+
+    case ActionTypes.RemoveTokens:
+      return { ...state, access_token: null, refresh_token: null };
+
+    case ActionTypes.SetUser:
+      return { ...state, user: action.payload };
+
+    case ActionTypes.SetLoading:
+      return { ...state, isLoading: action.payload };
+
+    default:
+      return state;
+  }
+};
+
+const AuthContext = createContext<AuthContextValue | null>(initialState);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [access_token, setAccessToken] = useState<string | null>(null);
-  const [refresh_token, setRefreshToken] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [state, dispatch] = useReducer(authReducer, initialState);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const bootstrapAsync = async () => {
@@ -26,55 +77,58 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const userAccessToken = await SecureStore.getItemAsync("userAccessToken");
         const userRefreshToken = await SecureStore.getItemAsync("userRefreshToken");
 
+        const { data } = await protectedInstance.get("auth/profile");
+        dispatch({ type: ActionTypes.SetUser, payload: data });
+
         if (userAccessToken && userRefreshToken) {
-          setAccessToken(userAccessToken);
-          setRefreshToken(userRefreshToken);
+          dispatch({
+            type: ActionTypes.SetTokens,
+            payload: { access_token: userAccessToken, refresh_token: userRefreshToken },
+          });
         }
       } catch (error) {
         console.error("Error retrieving tokens:", error);
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
     };
 
     bootstrapAsync();
   }, []);
 
-  const setStoredTokens = async (newAccessToken: string, newRefreshToken: string) => {
+  const setStoredTokens = useCallback(async (newAccessToken: string, newRefreshToken: string): Promise<void> => {
     try {
       await SecureStore.setItemAsync("userAccessToken", newAccessToken);
       await SecureStore.setItemAsync("userRefreshToken", newRefreshToken);
-      setAccessToken(newAccessToken);
-      setRefreshToken(newRefreshToken);
+      dispatch({
+        type: ActionTypes.SetTokens,
+        payload: { access_token: newAccessToken, refresh_token: newRefreshToken },
+      });
     } catch (error) {
       console.error("Error setting tokens:", error);
     }
-  };
+  }, []);
 
-  const removeTokens = async () => {
+  const removeTokens = useCallback(async (): Promise<void> => {
     try {
       await SecureStore.deleteItemAsync("userAccessToken");
       await SecureStore.deleteItemAsync("userRefreshToken");
-      setAccessToken(null);
-      setRefreshToken(null);
+      dispatch({ type: ActionTypes.RemoveTokens });
     } catch (error) {
       console.error("Error removing tokens:", error);
     }
-  };
+  }, []);
 
-  const authContext: AuthContextValue = {
-    access_token,
-    refresh_token,
-    isLoading,
-    setTokens: setStoredTokens,
-    removeTokens,
-  };
-
-  return (
-    <AuthContext.Provider value={isLoading ? null : authContext}>
-      {isLoading ? <LoadingScreen /> : children}
-    </AuthContext.Provider>
+  const authContextValue = useMemo(
+    () => ({
+      ...state,
+      setTokens: setStoredTokens,
+      removeTokens,
+    }),
+    [state, setStoredTokens, removeTokens]
   );
+
+  return <AuthContext.Provider value={authContextValue}>{loading ? <LoadingScreen /> : children}</AuthContext.Provider>;
 };
 
 export const useAuthContext = () => {
