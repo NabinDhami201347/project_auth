@@ -20,6 +20,7 @@ type AuthContextValue = {
   isLoading: boolean;
   setTokens: (access_token: string, refresh_token: string) => Promise<void>;
   removeTokens: () => Promise<void>;
+  updateUser: (userData: UserData) => void;
 };
 
 enum ActionTypes {
@@ -27,6 +28,7 @@ enum ActionTypes {
   RemoveTokens,
   SetUser,
   SetLoading,
+  UpdateUser,
 }
 
 interface Action {
@@ -41,6 +43,7 @@ const initialState: AuthContextValue = {
   isLoading: true,
   setTokens: async (_access_token, _refresh_token) => {},
   removeTokens: async () => {},
+  updateUser: (userData: UserData) => {},
 };
 
 const authReducer = (state: AuthContextValue, action: Action): AuthContextValue => {
@@ -56,6 +59,9 @@ const authReducer = (state: AuthContextValue, action: Action): AuthContextValue 
 
     case ActionTypes.SetLoading:
       return { ...state, isLoading: action.payload };
+
+    case ActionTypes.UpdateUser: // Step 3
+      return { ...state, user: action.payload };
 
     default:
       return state;
@@ -77,15 +83,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const userAccessToken = await SecureStore.getItemAsync("userAccessToken");
         const userRefreshToken = await SecureStore.getItemAsync("userRefreshToken");
 
-        const { data } = await protectedInstance.get("auth/profile");
-        dispatch({ type: ActionTypes.SetUser, payload: data });
-
         if (userAccessToken && userRefreshToken) {
-          dispatch({
-            type: ActionTypes.SetTokens,
-            payload: { access_token: userAccessToken, refresh_token: userRefreshToken },
-          });
+          // If access_token exists, make the API request
+          const { data } = await protectedInstance.get("auth/profile");
+          dispatch({ type: ActionTypes.SetUser, payload: data });
         }
+
+        dispatch({
+          type: ActionTypes.SetTokens,
+          payload: { access_token: userAccessToken || null, refresh_token: userRefreshToken || null },
+        });
       } catch (error) {
         console.error("Error retrieving tokens:", error);
       } finally {
@@ -95,6 +102,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     bootstrapAsync();
   }, []);
+
+  const updateUser = (userData: UserData) => {
+    dispatch({ type: ActionTypes.UpdateUser, payload: userData });
+  };
 
   const setStoredTokens = useCallback(async (newAccessToken: string, newRefreshToken: string): Promise<void> => {
     try {
@@ -124,6 +135,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       ...state,
       setTokens: setStoredTokens,
       removeTokens,
+      updateUser,
     }),
     [state, setStoredTokens, removeTokens]
   );

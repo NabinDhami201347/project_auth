@@ -1,16 +1,22 @@
 import React, { useState } from "react";
-import { Image, StyleSheet, Text, TouchableOpacity, View, Button } from "react-native";
-
-import mime from "mime";
 import { AntDesign } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
-import { imageuri, protectedInstance } from "../api";
-import { useAuthContext } from "../context/Auth";
+import { Image, StyleSheet, Text, TouchableOpacity, View, Button } from "react-native";
 
-const ImageComponent = () => {
+import type { Profile } from "../../types";
+import { imageuri, protectedInstance } from "../../api";
+import mime from "mime";
+import { useAuthContext } from "../../context/Auth";
+
+interface ProfileCardProps {
+  profile?: Profile;
+  username?: string;
+}
+
+const ProfileCard: React.FC<ProfileCardProps> = ({ profile, username }) => {
   const [selectedImage, setSelectedImage] = useState<ImagePicker.ImagePickerResult | null>(null);
+  const { updateUser } = useAuthContext();
 
-  const { user } = useAuthContext();
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
@@ -35,6 +41,7 @@ const ImageComponent = () => {
       return;
     }
 
+    // @ts-ignore
     const asset = selectedImage.assets[0];
     const mimeType = mime.getType(asset.uri);
     const formData = new FormData();
@@ -52,10 +59,10 @@ const ImageComponent = () => {
           "Content-Type": "multipart/form-data",
         },
       });
-      console.log("Upload successful:", response.data);
+      updateUser(response.data.user);
       setSelectedImage(null);
     } catch (error: any) {
-      console.log("Upload failed:", error.message);
+      console.log("Upload failed:", error.response.data);
     }
   };
 
@@ -63,12 +70,12 @@ const ImageComponent = () => {
     <View style={styles.container}>
       <View style={styles.rowContainer}>
         <View style={styles.basicBasicInformationContainer}>
-          {selectedImage ? (
+          {selectedImage && selectedImage.assets && selectedImage.assets.length > 0 ? (
             <Image source={{ uri: selectedImage.assets[0].uri }} style={styles.image} resizeMode="cover" />
           ) : (
             <>
-              {user?.profile && user.profile.photo ? (
-                <Image source={{ uri: `${imageuri}${user?.profile.photo}` }} style={styles.image} resizeMode="cover" />
+              {profile && profile?.photo ? (
+                <Image source={{ uri: `${imageuri}${profile.photo}` }} style={styles.image} resizeMode="cover" />
               ) : (
                 <Image
                   source={{ uri: `https://avatars.githubusercontent.com/u/95552086?v=4` }}
@@ -88,14 +95,14 @@ const ImageComponent = () => {
         <Button title="Save" onPress={uploadImage} />
       ) : (
         <View style={styles.infoContainer}>
-          <Text style={styles.name}>John Doe</Text>
+          <Text style={styles.name}>{username}</Text>
         </View>
       )}
     </View>
   );
 };
 
-export default ImageComponent;
+export default ProfileCard;
 
 const styles = StyleSheet.create({
   container: {

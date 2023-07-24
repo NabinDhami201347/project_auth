@@ -7,8 +7,6 @@ import { protectedInstance, fileuri } from "../api";
 // @ts-ignore
 const HomeScreen = ({ navigation }) => {
   const { removeTokens } = useAuthContext();
-  console.log(`${fileuri}file-1688647182290-710961280.pdf`);
-
   // const getSubjects = async () => {
   //   try {
   //     const { data } = await protectedInstance.get("/subjects/1");

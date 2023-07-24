@@ -1,10 +1,10 @@
 import HomeScreen from "./Home";
 import ProfileScreen from "./Profile";
 import LoadingScreen from "./Loading";
-import SignInScreen from "./SignIn";
-import SignUpScreen from "./SignUp";
-import ForgotPasswordScreen from "./ForgotPassword";
-import ChangePasswordScreen from "./ChangePassword";
+import SignInScreen from "./auth/SignIn";
+import SignUpScreen from "./auth/SignUp";
+import ForgotPasswordScreen from "./auth/ForgotPassword";
+import ChangePasswordScreen from "./auth/ChangePassword";
 
 export {
   HomeScreen,

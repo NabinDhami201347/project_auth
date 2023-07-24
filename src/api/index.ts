@@ -3,14 +3,14 @@ import * as SecureStore from "expo-secure-store";
 
 // Create Axios defaults for both instances
 const axiosDefaults = {
-  baseURL: "http://192.168.1.73:1337/api",
+  baseURL: "http://192.168.1.76:1337/api",
   timeout: 5000,
   headers: {
     "Content-Type": "application/json",
   },
 };
-export const imageuri = "http://192.168.1.73:1337/public/images/";
-export const fileuri = "http://192.168.1.73:1337/public/files/";
+export const imageuri = "http://192.168.1.76:1337/public/images/";
+export const fileuri = "http://192.168.1.76:1337/public/files/";
 
 // Create a new Axios instance for public routes
 const publicInstance: AxiosInstance = axios.create(axiosDefaults);

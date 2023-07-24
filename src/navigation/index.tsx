@@ -32,8 +32,8 @@ const PrivateStack = () => {
 const PublicStack = () => {
   return (
     <Stack.Navigator>
-      <Stack.Screen name="SignUp" component={SignUpScreen} />
       <Stack.Screen name="SignIn" component={SignInScreen} />
+      <Stack.Screen name="SignUp" component={SignUpScreen} />
       <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
     </Stack.Navigator>
   );
